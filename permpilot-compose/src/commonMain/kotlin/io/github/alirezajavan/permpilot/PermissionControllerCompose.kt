@@ -4,3 +4,6 @@ import androidx.compose.runtime.Composable
 
 @Composable
 expect fun rememberPermissionController(persistence: PermissionPersistence? = null): PermissionController
+
+@Composable
+expect fun UsePermissionController(controller: PermissionController)

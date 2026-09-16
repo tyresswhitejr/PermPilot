@@ -13,3 +13,8 @@ actual fun rememberPermissionController(persistence: PermissionPersistence?): Pe
 
     return controller
 }
+
+@Composable
+actual fun UsePermissionController(controller: PermissionController) {
+    ObserveLifecycleResume { controller.refreshAll() }
+}
