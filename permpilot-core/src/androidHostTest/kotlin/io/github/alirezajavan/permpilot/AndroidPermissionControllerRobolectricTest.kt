@@ -124,8 +124,12 @@ class AndroidPermissionControllerRobolectricTest {
     fun `first-ever denial of a real request resolves Denied, not PermanentlyDenied`() =
         runTest {
             val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
-            val controller = AndroidPermissionController(context())
-            controller.updateActivity(activity)
+            val activityProvider = ActivityProvider.create()
+            val controller = AndroidPermissionController(
+                context = context(),
+                activityProvider = activityProvider
+            )
+            activityProvider.update(activity)
 
             // Deny Camera before this Activity has ever seen a rationale-eligible request -- Robolectric's
             // default shouldShowRequestPermissionRationale is false here, mirroring "user's very first
@@ -141,8 +145,12 @@ class AndroidPermissionControllerRobolectricTest {
     fun `a second real denial after the first request resolves PermanentlyDenied`() =
         runTest {
             val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
-            val controller = AndroidPermissionController(context())
-            controller.updateActivity(activity)
+            val activityProvider = ActivityProvider.create()
+            val controller = AndroidPermissionController(
+                context = context(),
+                activityProvider = activityProvider
+            )
+            activityProvider.update(activity)
 
             val first = async { controller.request(Permission.Camera) }
             (controller.multiRequestFlow.first() as PermissionRequest.Runtime).onResult(mapOf(Manifest.permission.CAMERA to false))
@@ -164,8 +172,12 @@ class AndroidPermissionControllerRobolectricTest {
             // *per process*, not per test method, so the persisted "requested_Camera" flag from those
             // tests would otherwise leak into this one and change which branch gets exercised here.
             val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
-            val controller = AndroidPermissionController(context())
-            controller.updateActivity(activity)
+            val activityProvider = ActivityProvider.create()
+            val controller = AndroidPermissionController(
+                context = context(),
+                activityProvider = activityProvider
+            )
+            activityProvider.update(activity)
 
             val requestDeferred = async { controller.request(Permission.Microphone) }
             (controller.multiRequestFlow.first() as PermissionRequest.Runtime).onResult(mapOf(Manifest.permission.RECORD_AUDIO to true))
@@ -185,8 +197,12 @@ class AndroidPermissionControllerRobolectricTest {
     fun `a caller cancelled while the OS dialog is up still gets the grant published through state()`() =
         runTest {
             val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
-            val controller = AndroidPermissionController(context())
-            controller.updateActivity(activity)
+            val activityProvider = ActivityProvider.create()
+            val controller = AndroidPermissionController(
+                context = context(),
+                activityProvider = activityProvider
+            )
+            activityProvider.update(activity)
 
             // Distinct permission (Contacts) -- Robolectric's static SharedPreferences cache leaks the
             // persisted requested_* flags across test methods in this class (see the Granted test above).
@@ -205,8 +221,12 @@ class AndroidPermissionControllerRobolectricTest {
     fun `a caller cancelled while the OS dialog is up still gets a denial published through state()`() =
         runTest {
             val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
-            val controller = AndroidPermissionController(context())
-            controller.updateActivity(activity)
+            val activityProvider = ActivityProvider.create()
+            val controller = AndroidPermissionController(
+                context = context(),
+                activityProvider = activityProvider
+            )
+            activityProvider.update(activity)
 
             val requestJob = launch { controller.request(Permission.SendSms) }
             val emitted = controller.multiRequestFlow.first() as PermissionRequest.Runtime
@@ -298,8 +318,12 @@ class AndroidPermissionControllerRobolectricTest {
             // The app declares *some* permissions -- just not RECORD_AUDIO.
             declareManifestPermissions(Manifest.permission.CAMERA)
             val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
-            val controller = AndroidPermissionController(context())
-            controller.updateActivity(activity)
+            val activityProvider = ActivityProvider.create()
+            val controller = AndroidPermissionController(
+                context = context(),
+                activityProvider = activityProvider
+            )
+            activityProvider.update(activity)
 
             val state = controller.request(Permission.Microphone)
 
@@ -313,8 +337,12 @@ class AndroidPermissionControllerRobolectricTest {
         runTest {
             declareManifestPermissions(Manifest.permission.CAMERA)
             val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
-            val controller = AndroidPermissionController(context())
-            controller.updateActivity(activity)
+            val activityProvider = ActivityProvider.create()
+            val controller = AndroidPermissionController(
+                context = context(),
+                activityProvider = activityProvider
+            )
+            activityProvider.update(activity)
 
             val resultsDeferred = async { controller.requestAll(Permission.Camera, Permission.Microphone) }
             // Only the declared Camera reaches the native launcher.
@@ -453,8 +481,12 @@ class AndroidPermissionControllerRobolectricTest {
     fun `granting only coarse location resolves Limited ApproximateLocationOnly, not Denied`() =
         runTest {
             val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
-            val controller = AndroidPermissionController(context())
-            controller.updateActivity(activity)
+            val activityProvider = ActivityProvider.create()
+            val controller = AndroidPermissionController(
+                context = context(),
+                activityProvider = activityProvider
+            )
+            activityProvider.update(activity)
 
             val requestDeferred = async { controller.request(Permission.LocationWhileInUse) }
             (controller.multiRequestFlow.first() as PermissionRequest.Runtime).onResult(
