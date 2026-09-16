@@ -2,7 +2,6 @@ package io.github.alirezajavan.permpilot
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.app.AlarmManager
 import android.content.Context
 import android.content.Intent
@@ -26,19 +25,18 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.lang.ref.WeakReference
 import kotlin.coroutines.resume
 
 fun PermissionController.Companion.create(
     context: Context,
-    activityProvider: (() -> Activity?)? = null,
+    activityProvider: ActivityProvider? = null,
     scope: CoroutineScope? = null,
     persistence: PermissionPersistence? = null,
 ): PermissionController = AndroidPermissionController(context, activityProvider, scope, persistence)
 
 class AndroidPermissionController(
     private val context: Context,
-    private val activityProvider: (() -> Activity?)? = null,
+    private val activityProvider: ActivityProvider? = null,
     private val scope: CoroutineScope? = null,
     persistence: PermissionPersistence? = null,
 ) : PermissionController {
@@ -57,11 +55,6 @@ class AndroidPermissionController(
             null
         }
     }
-
-    // shouldShowRequestPermissionRationale is an Activity API; the controller itself is held
-    // via applicationContext so it survives Activity recreation, so the current Activity is
-    // tracked separately and refreshed by the Compose bridge on every recomposition.
-    private var activityRef: WeakReference<Activity>? = null
 
     val multiRequestFlow = MutableSharedFlow<PermissionRequest>(extraBufferCapacity = 1)
 
@@ -100,11 +93,7 @@ class AndroidPermissionController(
         return manifestPermissions.any { it !in declared }
     }
 
-    fun updateActivity(activity: Activity?) {
-        activityRef = activity?.let { WeakReference(it) }
-    }
-
-    private fun hasHostActivity(): Boolean = (activityProvider?.invoke() ?: activityRef?.get()) != null
+    private fun hasHostActivity(): Boolean = activityProvider?.current() != null
 
     override fun state(permission: Permission): StateFlow<PermissionState> =
         states
@@ -514,7 +503,7 @@ class AndroidPermissionController(
     // attached; the actual Denied-vs-PermanentlyDenied decision logic lives in
     // resolveDeniedStateFrom (AndroidPermissionMapping.kt) as a pure, directly-testable function.
     private fun canShowRationaleFor(manifestPermissions: List<String>): Boolean {
-        val activity = activityProvider?.invoke() ?: activityRef?.get()
+        val activity = activityProvider?.current()
         return activity != null &&
             manifestPermissions.any { mp ->
                 ActivityCompat.shouldShowRequestPermissionRationale(activity, mp)

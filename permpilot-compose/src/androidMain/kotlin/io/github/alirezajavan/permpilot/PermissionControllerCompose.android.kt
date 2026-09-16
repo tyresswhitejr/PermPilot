@@ -6,8 +6,8 @@ import android.content.ContextWrapper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -20,21 +20,39 @@ import kotlinx.coroutines.flow.collectLatest
 actual fun rememberPermissionController(persistence: PermissionPersistence?): PermissionController {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val activityProvider = rememberActivityProvider()
     val controller =
         remember {
             PermissionController.create(
                 context.applicationContext,
                 scope = scope,
+                activityProvider = activityProvider,
                 persistence = persistence,
             ) as AndroidPermissionController
         }
 
-    // shouldShowRequestPermissionRationale is an Activity-only API; refresh the controller's
-    // reference every recomposition so it survives Activity recreation across config changes.
-    SideEffect {
-        controller.updateActivity(context.findActivity())
+    // shouldShowRequestPermissionRationale is an Activity-only API;
+    // Notify activityProvider of latest activity this composition is attached to
+    val activity = context.findActivity()
+    DisposableEffect(context) {
+        activity?.let(activityProvider::update)
+        onDispose {
+            activity?.let(activityProvider::clear)
+        }
     }
 
+    UseAndroidPermissionController(controller)
+
+    return controller
+}
+
+@Composable
+actual fun UsePermissionController(controller: PermissionController) {
+    UseAndroidPermissionController(controller as AndroidPermissionController)
+}
+
+@Composable
+private fun UseAndroidPermissionController(controller: AndroidPermissionController) {
     var currentMultiCallback by remember { mutableStateOf<((Map<String, Boolean>) -> Unit)?>(null) }
     var currentHealthCallback by remember { mutableStateOf<((Set<String>) -> Unit)?>(null) }
 
@@ -63,6 +81,7 @@ actual fun rememberPermissionController(persistence: PermissionPersistence?): Pe
                     currentMultiCallback = request.onResult
                     multiLauncher.launch(request.permissions)
                 }
+
                 is PermissionRequest.Health -> {
                     currentHealthCallback = request.onResult
                     healthLauncher.launch(request.permissions)
@@ -75,8 +94,6 @@ actual fun rememberPermissionController(persistence: PermissionPersistence?): Pe
     // Settings redirect, which never calls back into request() -- ON_RESUME after returning from
     // that Settings screen is the only signal available that the state may have changed.
     ObserveLifecycleResume { controller.refreshAll() }
-
-    return controller
 }
 
 private tailrec fun Context.findActivity(): Activity? =
