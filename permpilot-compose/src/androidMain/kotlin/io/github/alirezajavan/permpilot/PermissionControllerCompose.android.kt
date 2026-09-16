@@ -34,7 +34,7 @@ actual fun rememberPermissionController(persistence: PermissionPersistence?): Pe
     // shouldShowRequestPermissionRationale is an Activity-only API;
     // Notify activityProvider of latest activity this composition is attached to
     val activity = context.findActivity()
-    DisposableEffect(context) {
+    DisposableEffect(activity) {
         activity?.let(activityProvider::update)
         onDispose {
             activity?.let(activityProvider::clear)
